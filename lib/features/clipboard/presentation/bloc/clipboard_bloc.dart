@@ -24,6 +24,7 @@ class ClipboardBloc extends Bloc<ClipboardEvent, ClipboardState> {
     on<ClipboardItemAdded>(_onItemAdded);
     on<ClipboardSearchQueryChanged>(_onSearchQueryChanged);
     on<ClipboardDateFilterChanged>(_onDateFilterChanged);
+    on<ClipboardCategoryFilterChanged>(_onCategoryFilterChanged);
     on<ClipboardItemDeleted>(_onItemDeleted);
     on<ClipboardFavoriteToggled>(_onFavoriteToggled);
     on<ClipboardHistoryCleared>(_onHistoryCleared);
@@ -138,6 +139,21 @@ class ClipboardBloc extends Bloc<ClipboardEvent, ClipboardState> {
       } catch (e) {
         emit(ClipboardError(e.toString()));
       }
+    }
+  }
+
+  Future<void> _onCategoryFilterChanged(
+    ClipboardCategoryFilterChanged event,
+    Emitter<ClipboardState> emit,
+  ) async {
+    if (state is ClipboardLoaded) {
+      final currentState = state as ClipboardLoaded;
+      emit(
+        currentState.copyWith(
+          categoryFilter: event.category,
+          clearCategoryFilter: event.category == null,
+        ),
+      );
     }
   }
 

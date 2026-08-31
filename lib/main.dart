@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/database/database.dart';
@@ -18,10 +21,20 @@ import 'features/clipboard/domain/hashing/sha256_content_hasher.dart';
 import 'features/clipboard/domain/usecases/add_clipboard_item.dart';
 import 'features/clipboard/presentation/bloc/clipboard_bloc.dart';
 import 'features/clipboard/presentation/bloc/clipboard_event.dart';
-import 'features/clipboard/presentation/pages/clipboard_history_page.dart';
+import 'features/clipboard/presentation/pages/clipboard_modern_panel_page.dart';
+import 'features/clipboard/presentation/theme/clipboard_ui_colors.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (Platform.isMacOS) {
+    await Window.initialize();
+    await Window.makeTitlebarTransparent();
+    await Window.setEffect(
+      effect: WindowEffect.hudWindow,
+      color: ClipboardUiColors.windowTint.withValues(alpha: 0.5),
+    );
+  }
 
   final db = AppDatabase();
   final repository = ClipboardRepositoryImpl(db);
@@ -69,22 +82,13 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Clipboard Manager',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
+      themeMode: ThemeMode.dark,
       darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.dark,
-        ),
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: Colors.transparent,
         useMaterial3: true,
       ),
-      themeMode: ThemeMode.system,
-      home: const ClipboardHistoryPage(),
+      home: const ClipboardModernPanelPage(),
     );
   }
 }
