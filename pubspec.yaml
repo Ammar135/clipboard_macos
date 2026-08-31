@@ -45,6 +45,12 @@ dependencies:
   # Crypto (content hashing for duplicate detection)
   crypto: ^3.0.0
 
+  # Quick actions (open URL / mailto)
+  url_launcher: ^6.3.1
+
+  # Date/time formatting
+  intl: ^0.20.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

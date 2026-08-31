@@ -1,9 +1,12 @@
 import 'package:equatable/equatable.dart';
 
+import 'content_category.dart';
+
 class ClipboardItem extends Equatable {
   final int id;
   final String content;
-  final String type;
+  final ContentCategory category;
+  final String? contentHash;
   final DateTime createdAt;
   final DateTime? lastUsedAt;
   final String? sourceApp;
@@ -12,28 +15,35 @@ class ClipboardItem extends Equatable {
   const ClipboardItem({
     required this.id,
     required this.content,
-    required this.type,
+    required this.category,
+    this.contentHash,
     required this.createdAt,
     this.lastUsedAt,
     this.sourceApp,
     required this.isFavorite,
   });
 
+  String get type => category.storageValue;
+
+  bool get isImage => category == ContentCategory.image;
+
   @override
   List<Object?> get props => [
         id,
         content,
-        type,
+        category,
+        contentHash,
         createdAt,
         lastUsedAt,
         sourceApp,
         isFavorite,
       ];
-      
+
   ClipboardItem copyWith({
     int? id,
     String? content,
-    String? type,
+    ContentCategory? category,
+    String? contentHash,
     DateTime? createdAt,
     DateTime? lastUsedAt,
     String? sourceApp,
@@ -42,7 +52,8 @@ class ClipboardItem extends Equatable {
     return ClipboardItem(
       id: id ?? this.id,
       content: content ?? this.content,
-      type: type ?? this.type,
+      category: category ?? this.category,
+      contentHash: contentHash ?? this.contentHash,
       createdAt: createdAt ?? this.createdAt,
       lastUsedAt: lastUsedAt ?? this.lastUsedAt,
       sourceApp: sourceApp ?? this.sourceApp,

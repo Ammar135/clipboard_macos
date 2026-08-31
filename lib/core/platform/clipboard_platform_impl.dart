@@ -1,4 +1,6 @@
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import 'clipboard_platform.dart';
 import 'platform_channels.dart';
 
@@ -50,5 +52,23 @@ class ClipboardPlatformImpl implements ClipboardPlatform {
   @override
   Future<void> copyImageToClipboard(String path) async {
     await _methodChannel.invokeMethod('copyImageToClipboard', {'path': path});
+  }
+
+  @override
+  Future<void> openUrl(String url) async {
+    final uri = Uri.parse(
+      url.startsWith('www.') ? 'https://$url' : url,
+    );
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch $url');
+    }
+  }
+
+  @override
+  Future<void> openEmail(String email) async {
+    final uri = Uri(scheme: 'mailto', path: email);
+    if (!await launchUrl(uri)) {
+      throw Exception('Could not open mail client for $email');
+    }
   }
 }

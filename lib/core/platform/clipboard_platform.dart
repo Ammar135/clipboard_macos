@@ -13,4 +13,8 @@ abstract interface class ClipboardPlatform {
   Future<void> setLaunchAtLogin(bool enabled);
   
   Future<void> setMonitoringEnabled(bool enabled);
+
+  Future<void> openUrl(String url);
+
+  Future<void> openEmail(String email);
 }
