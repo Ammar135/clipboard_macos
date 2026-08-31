@@ -31,6 +31,8 @@ dependencies:
   flutter:
     sdk: flutter
 
+  cupertino_icons: ^1.0.8
+
   # Database
   drift: ^2.34.0
   drift_flutter: ^0.3.0
@@ -44,6 +46,15 @@ dependencies:
 
   # Crypto (content hashing for duplicate detection)
   crypto: ^3.0.0
+
+  # Quick actions (open URL / mailto)
+  url_launcher: ^6.3.1
+
+  # Date/time formatting
+  intl: ^0.20.2
+
+  # macOS glass window effect
+  flutter_acrylic: ^1.1.4
 
 dev_dependencies:
   flutter_test:

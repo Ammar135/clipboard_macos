@@ -43,6 +43,17 @@ class $ClipboardItemsTableTable extends ClipboardItemsTable
     requiredDuringInsert: false,
     defaultValue: const Constant('text'),
   );
+  static const VerificationMeta _contentHashMeta = const VerificationMeta(
+    'contentHash',
+  );
+  @override
+  late final GeneratedColumn<String> contentHash = GeneratedColumn<String>(
+    'content_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -96,6 +107,7 @@ class $ClipboardItemsTableTable extends ClipboardItemsTable
     id,
     content,
     type,
+    contentHash,
     createdAt,
     lastUsedAt,
     sourceApp,
@@ -128,6 +140,15 @@ class $ClipboardItemsTableTable extends ClipboardItemsTable
       context.handle(
         _typeMeta,
         type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    }
+    if (data.containsKey('content_hash')) {
+      context.handle(
+        _contentHashMeta,
+        contentHash.isAcceptableOrUnknown(
+          data['content_hash']!,
+          _contentHashMeta,
+        ),
       );
     }
     if (data.containsKey('created_at')) {
@@ -180,6 +201,10 @@ class $ClipboardItemsTableTable extends ClipboardItemsTable
         DriftSqlType.string,
         data['${effectivePrefix}type'],
       )!,
+      contentHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_hash'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -210,6 +235,7 @@ class ClipboardItemEntity extends DataClass
   final int id;
   final String content;
   final String type;
+  final String? contentHash;
   final int createdAt;
   final int? lastUsedAt;
   final String? sourceApp;
@@ -218,6 +244,7 @@ class ClipboardItemEntity extends DataClass
     required this.id,
     required this.content,
     required this.type,
+    this.contentHash,
     required this.createdAt,
     this.lastUsedAt,
     this.sourceApp,
@@ -229,6 +256,9 @@ class ClipboardItemEntity extends DataClass
     map['id'] = Variable<int>(id);
     map['content'] = Variable<String>(content);
     map['type'] = Variable<String>(type);
+    if (!nullToAbsent || contentHash != null) {
+      map['content_hash'] = Variable<String>(contentHash);
+    }
     map['created_at'] = Variable<int>(createdAt);
     if (!nullToAbsent || lastUsedAt != null) {
       map['last_used_at'] = Variable<int>(lastUsedAt);
@@ -245,6 +275,9 @@ class ClipboardItemEntity extends DataClass
       id: Value(id),
       content: Value(content),
       type: Value(type),
+      contentHash: contentHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contentHash),
       createdAt: Value(createdAt),
       lastUsedAt: lastUsedAt == null && nullToAbsent
           ? const Value.absent()
@@ -265,6 +298,7 @@ class ClipboardItemEntity extends DataClass
       id: serializer.fromJson<int>(json['id']),
       content: serializer.fromJson<String>(json['content']),
       type: serializer.fromJson<String>(json['type']),
+      contentHash: serializer.fromJson<String?>(json['contentHash']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       lastUsedAt: serializer.fromJson<int?>(json['lastUsedAt']),
       sourceApp: serializer.fromJson<String?>(json['sourceApp']),
@@ -278,6 +312,7 @@ class ClipboardItemEntity extends DataClass
       'id': serializer.toJson<int>(id),
       'content': serializer.toJson<String>(content),
       'type': serializer.toJson<String>(type),
+      'contentHash': serializer.toJson<String?>(contentHash),
       'createdAt': serializer.toJson<int>(createdAt),
       'lastUsedAt': serializer.toJson<int?>(lastUsedAt),
       'sourceApp': serializer.toJson<String?>(sourceApp),
@@ -289,6 +324,7 @@ class ClipboardItemEntity extends DataClass
     int? id,
     String? content,
     String? type,
+    Value<String?> contentHash = const Value.absent(),
     int? createdAt,
     Value<int?> lastUsedAt = const Value.absent(),
     Value<String?> sourceApp = const Value.absent(),
@@ -297,6 +333,7 @@ class ClipboardItemEntity extends DataClass
     id: id ?? this.id,
     content: content ?? this.content,
     type: type ?? this.type,
+    contentHash: contentHash.present ? contentHash.value : this.contentHash,
     createdAt: createdAt ?? this.createdAt,
     lastUsedAt: lastUsedAt.present ? lastUsedAt.value : this.lastUsedAt,
     sourceApp: sourceApp.present ? sourceApp.value : this.sourceApp,
@@ -307,6 +344,9 @@ class ClipboardItemEntity extends DataClass
       id: data.id.present ? data.id.value : this.id,
       content: data.content.present ? data.content.value : this.content,
       type: data.type.present ? data.type.value : this.type,
+      contentHash: data.contentHash.present
+          ? data.contentHash.value
+          : this.contentHash,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       lastUsedAt: data.lastUsedAt.present
           ? data.lastUsedAt.value
@@ -324,6 +364,7 @@ class ClipboardItemEntity extends DataClass
           ..write('id: $id, ')
           ..write('content: $content, ')
           ..write('type: $type, ')
+          ..write('contentHash: $contentHash, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastUsedAt: $lastUsedAt, ')
           ..write('sourceApp: $sourceApp, ')
@@ -337,6 +378,7 @@ class ClipboardItemEntity extends DataClass
     id,
     content,
     type,
+    contentHash,
     createdAt,
     lastUsedAt,
     sourceApp,
@@ -349,6 +391,7 @@ class ClipboardItemEntity extends DataClass
           other.id == this.id &&
           other.content == this.content &&
           other.type == this.type &&
+          other.contentHash == this.contentHash &&
           other.createdAt == this.createdAt &&
           other.lastUsedAt == this.lastUsedAt &&
           other.sourceApp == this.sourceApp &&
@@ -360,6 +403,7 @@ class ClipboardItemsTableCompanion
   final Value<int> id;
   final Value<String> content;
   final Value<String> type;
+  final Value<String?> contentHash;
   final Value<int> createdAt;
   final Value<int?> lastUsedAt;
   final Value<String?> sourceApp;
@@ -368,6 +412,7 @@ class ClipboardItemsTableCompanion
     this.id = const Value.absent(),
     this.content = const Value.absent(),
     this.type = const Value.absent(),
+    this.contentHash = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.lastUsedAt = const Value.absent(),
     this.sourceApp = const Value.absent(),
@@ -377,6 +422,7 @@ class ClipboardItemsTableCompanion
     this.id = const Value.absent(),
     required String content,
     this.type = const Value.absent(),
+    this.contentHash = const Value.absent(),
     required int createdAt,
     this.lastUsedAt = const Value.absent(),
     this.sourceApp = const Value.absent(),
@@ -387,6 +433,7 @@ class ClipboardItemsTableCompanion
     Expression<int>? id,
     Expression<String>? content,
     Expression<String>? type,
+    Expression<String>? contentHash,
     Expression<int>? createdAt,
     Expression<int>? lastUsedAt,
     Expression<String>? sourceApp,
@@ -396,6 +443,7 @@ class ClipboardItemsTableCompanion
       if (id != null) 'id': id,
       if (content != null) 'content': content,
       if (type != null) 'type': type,
+      if (contentHash != null) 'content_hash': contentHash,
       if (createdAt != null) 'created_at': createdAt,
       if (lastUsedAt != null) 'last_used_at': lastUsedAt,
       if (sourceApp != null) 'source_app': sourceApp,
@@ -407,6 +455,7 @@ class ClipboardItemsTableCompanion
     Value<int>? id,
     Value<String>? content,
     Value<String>? type,
+    Value<String?>? contentHash,
     Value<int>? createdAt,
     Value<int?>? lastUsedAt,
     Value<String?>? sourceApp,
@@ -416,6 +465,7 @@ class ClipboardItemsTableCompanion
       id: id ?? this.id,
       content: content ?? this.content,
       type: type ?? this.type,
+      contentHash: contentHash ?? this.contentHash,
       createdAt: createdAt ?? this.createdAt,
       lastUsedAt: lastUsedAt ?? this.lastUsedAt,
       sourceApp: sourceApp ?? this.sourceApp,
@@ -434,6 +484,9 @@ class ClipboardItemsTableCompanion
     }
     if (type.present) {
       map['type'] = Variable<String>(type.value);
+    }
+    if (contentHash.present) {
+      map['content_hash'] = Variable<String>(contentHash.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -456,6 +509,7 @@ class ClipboardItemsTableCompanion
           ..write('id: $id, ')
           ..write('content: $content, ')
           ..write('type: $type, ')
+          ..write('contentHash: $contentHash, ')
           ..write('createdAt: $createdAt, ')
           ..write('lastUsedAt: $lastUsedAt, ')
           ..write('sourceApp: $sourceApp, ')
@@ -482,6 +536,7 @@ typedef $$ClipboardItemsTableTableCreateCompanionBuilder =
       Value<int> id,
       required String content,
       Value<String> type,
+      Value<String?> contentHash,
       required int createdAt,
       Value<int?> lastUsedAt,
       Value<String?> sourceApp,
@@ -492,6 +547,7 @@ typedef $$ClipboardItemsTableTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String> content,
       Value<String> type,
+      Value<String?> contentHash,
       Value<int> createdAt,
       Value<int?> lastUsedAt,
       Value<String?> sourceApp,
@@ -519,6 +575,11 @@ class $$ClipboardItemsTableTableFilterComposer
 
   ColumnFilters<String> get type => $composableBuilder(
     column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -567,6 +628,11 @@ class $$ClipboardItemsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -605,6 +671,11 @@ class $$ClipboardItemsTableTableAnnotationComposer
 
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -669,6 +740,7 @@ class $$ClipboardItemsTableTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> content = const Value.absent(),
                 Value<String> type = const Value.absent(),
+                Value<String?> contentHash = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int?> lastUsedAt = const Value.absent(),
                 Value<String?> sourceApp = const Value.absent(),
@@ -677,6 +749,7 @@ class $$ClipboardItemsTableTableTableManager
                 id: id,
                 content: content,
                 type: type,
+                contentHash: contentHash,
                 createdAt: createdAt,
                 lastUsedAt: lastUsedAt,
                 sourceApp: sourceApp,
@@ -687,6 +760,7 @@ class $$ClipboardItemsTableTableTableManager
                 Value<int> id = const Value.absent(),
                 required String content,
                 Value<String> type = const Value.absent(),
+                Value<String?> contentHash = const Value.absent(),
                 required int createdAt,
                 Value<int?> lastUsedAt = const Value.absent(),
                 Value<String?> sourceApp = const Value.absent(),
@@ -695,6 +769,7 @@ class $$ClipboardItemsTableTableTableManager
                 id: id,
                 content: content,
                 type: type,
+                contentHash: contentHash,
                 createdAt: createdAt,
                 lastUsedAt: lastUsedAt,
                 sourceApp: sourceApp,

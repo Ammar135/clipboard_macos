@@ -1,7 +1,9 @@
 import 'package:drift/drift.dart';
+import 'package:flutter/material.dart';
 
 import '../../../../core/database/database.dart';
 import '../../domain/entities/clipboard_item.dart';
+import '../../domain/entities/content_category.dart';
 import '../../domain/repositories/clipboard_repository.dart';
 
 class ClipboardRepositoryImpl implements ClipboardRepository {
@@ -10,7 +12,10 @@ class ClipboardRepositoryImpl implements ClipboardRepository {
   ClipboardRepositoryImpl(this._db);
 
   @override
-  Future<List<ClipboardItem>> getHistory({int limit = 1000}) async {
+  Future<List<ClipboardItem>> getHistory({
+    int limit = 1000,
+    DateTimeRange? createdBetween,
+  }) async {
     final query = _db.select(_db.clipboardItemsTable)
       ..orderBy([
         (t) => OrderingTerm(expression: t.isFavorite, mode: OrderingMode.desc),
@@ -18,12 +23,18 @@ class ClipboardRepositoryImpl implements ClipboardRepository {
       ])
       ..limit(limit);
 
+    _applyDateFilter(query, createdBetween);
+
     final results = await query.get();
     return results.map(_mapEntityToDomain).toList();
   }
 
   @override
-  Future<List<ClipboardItem>> search(String query, {int limit = 1000}) async {
+  Future<List<ClipboardItem>> search(
+    String query, {
+    int limit = 1000,
+    DateTimeRange? createdBetween,
+  }) async {
     final likeQuery = '%$query%';
     final dbQuery = _db.select(_db.clipboardItemsTable)
       ..where((t) => t.content.like(likeQuery))
@@ -33,18 +44,34 @@ class ClipboardRepositoryImpl implements ClipboardRepository {
       ])
       ..limit(limit);
 
+    _applyDateFilter(dbQuery, createdBetween);
+
     final results = await dbQuery.get();
     return results.map(_mapEntityToDomain).toList();
   }
 
+  void _applyDateFilter(
+    SimpleSelectStatement<$ClipboardItemsTableTable, ClipboardItemEntity> query,
+    DateTimeRange? createdBetween,
+  ) {
+    if (createdBetween == null) {
+      return;
+    }
+
+    final startMs = createdBetween.start.millisecondsSinceEpoch;
+    final endMs = createdBetween.end.millisecondsSinceEpoch;
+
+    query.where((t) => t.createdAt.isBiggerOrEqualValue(startMs));
+    query.where((t) => t.createdAt.isSmallerThanValue(endMs));
+  }
+
   @override
   Future<void> save(ClipboardItem item) async {
-    await _db
-        .into(_db.clipboardItemsTable)
-        .insert(
+    await _db.into(_db.clipboardItemsTable).insert(
           ClipboardItemsTableCompanion.insert(
             content: item.content,
-            type: Value(item.type),
+            type: Value(item.category.storageValue),
+            contentHash: Value(item.contentHash),
             createdAt: item.createdAt.millisecondsSinceEpoch,
             lastUsedAt: Value(item.lastUsedAt?.millisecondsSinceEpoch),
             sourceApp: Value(item.sourceApp),
@@ -81,10 +108,6 @@ class ClipboardRepositoryImpl implements ClipboardRepository {
 
   @override
   Future<void> enforceHistoryLimit(int limit) async {
-    // Keep favorites, only delete non-favorites that exceed the limit
-
-    // First, find the created_at timestamp of the item at the limit boundary
-    // among non-favorites
     final query = _db.select(_db.clipboardItemsTable)
       ..where((t) => t.isFavorite.equals(false))
       ..orderBy([
@@ -95,7 +118,6 @@ class ClipboardRepositoryImpl implements ClipboardRepository {
     final boundaryItem = await query.getSingleOrNull();
 
     if (boundaryItem != null) {
-      // Delete all non-favorites older than or equal to the boundary item
       await (_db.delete(_db.clipboardItemsTable)
             ..where((t) => t.isFavorite.equals(false))
             ..where(
@@ -105,11 +127,32 @@ class ClipboardRepositoryImpl implements ClipboardRepository {
     }
   }
 
+  @override
+  Future<ClipboardItem?> findByContentHash(String hash) async {
+    final query = _db.select(_db.clipboardItemsTable)
+      ..where((t) => t.contentHash.equals(hash))
+      ..limit(1);
+
+    final result = await query.getSingleOrNull();
+    return result == null ? null : _mapEntityToDomain(result);
+  }
+
+  @override
+  Future<void> touchLastUsed(int id) async {
+    await (_db.update(_db.clipboardItemsTable)..where((t) => t.id.equals(id)))
+        .write(
+      ClipboardItemsTableCompanion(
+        lastUsedAt: Value(DateTime.now().millisecondsSinceEpoch),
+      ),
+    );
+  }
+
   ClipboardItem _mapEntityToDomain(ClipboardItemEntity entity) {
     return ClipboardItem(
       id: entity.id,
       content: entity.content,
-      type: entity.type,
+      category: ContentCategory.fromStorage(entity.type),
+      contentHash: entity.contentHash,
       createdAt: DateTime.fromMillisecondsSinceEpoch(entity.createdAt),
       lastUsedAt: entity.lastUsedAt != null
           ? DateTime.fromMillisecondsSinceEpoch(entity.lastUsedAt!)

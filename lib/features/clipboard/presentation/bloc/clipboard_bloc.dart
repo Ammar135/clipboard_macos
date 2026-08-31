@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../domain/entities/clipboard_capture.dart';
+import '../../domain/entities/clipboard_date_filter.dart';
 import '../../domain/entities/clipboard_item.dart';
 import '../../domain/repositories/clipboard_repository.dart';
+import '../../domain/usecases/add_clipboard_item.dart';
 import '../../../../core/platform/clipboard_platform.dart';
 import 'clipboard_event.dart';
 import 'clipboard_state.dart';
@@ -9,15 +12,19 @@ import 'clipboard_state.dart';
 class ClipboardBloc extends Bloc<ClipboardEvent, ClipboardState> {
   final ClipboardRepository repository;
   final ClipboardPlatform platform;
+  final AddClipboardItemUseCase addClipboardItem;
   StreamSubscription? platformEventsSubscription;
 
   ClipboardBloc({
     required this.repository,
     required this.platform,
+    required this.addClipboardItem,
   })  : super(ClipboardInitial()) {
     on<ClipboardLoadHistory>(_onLoadHistory);
     on<ClipboardItemAdded>(_onItemAdded);
     on<ClipboardSearchQueryChanged>(_onSearchQueryChanged);
+    on<ClipboardDateFilterChanged>(_onDateFilterChanged);
+    on<ClipboardCategoryFilterChanged>(_onCategoryFilterChanged);
     on<ClipboardItemDeleted>(_onItemDeleted);
     on<ClipboardFavoriteToggled>(_onFavoriteToggled);
     on<ClipboardHistoryCleared>(_onHistoryCleared);
@@ -46,6 +53,17 @@ class ClipboardBloc extends Bloc<ClipboardEvent, ClipboardState> {
     });
   }
 
+  Future<List<ClipboardItem>> _fetchItems({
+    required String searchQuery,
+    required ClipboardDateFilter dateFilter,
+  }) async {
+    final range = dateFilter.toRange();
+    if (searchQuery.isEmpty) {
+      return repository.getHistory(createdBetween: range);
+    }
+    return repository.search(searchQuery, createdBetween: range);
+  }
+
   Future<void> _onLoadHistory(
     ClipboardLoadHistory event,
     Emitter<ClipboardState> emit,
@@ -64,28 +82,27 @@ class ClipboardBloc extends Bloc<ClipboardEvent, ClipboardState> {
     Emitter<ClipboardState> emit,
   ) async {
     try {
-      final newItem = ClipboardItem(
-        id: 0, // Auto-incremented by DB
+      final capture = ClipboardCapture.fromPlatformEvent(
         content: event.content,
-        type: event.type,
-        createdAt: DateTime.now(),
+        platformType: event.type,
         sourceApp: event.sourceApp,
-        isFavorite: false,
       );
 
-      await repository.save(newItem);
-      await repository.enforceHistoryLimit(1000);
-
-      // If we are loaded and not searching, refresh the list
-      if (state is ClipboardLoaded) {
-        final currentState = state as ClipboardLoaded;
-        if (currentState.searchQuery.isEmpty) {
-          final items = await repository.getHistory();
-          emit(currentState.copyWith(items: items));
-        }
-      }
-    } catch (e) {
+      await addClipboardItem(capture);
+      await _refreshLoadedList(emit);
+    } catch (_) {
       // Background save error, maybe log it
+    }
+  }
+
+  Future<void> _refreshLoadedList(Emitter<ClipboardState> emit) async {
+    if (state is ClipboardLoaded) {
+      final currentState = state as ClipboardLoaded;
+      final items = await _fetchItems(
+        searchQuery: currentState.searchQuery,
+        dateFilter: currentState.dateFilter,
+      );
+      emit(currentState.copyWith(items: items));
     }
   }
 
@@ -96,16 +113,47 @@ class ClipboardBloc extends Bloc<ClipboardEvent, ClipboardState> {
     if (state is ClipboardLoaded) {
       final currentState = state as ClipboardLoaded;
       try {
-        List<ClipboardItem> items;
-        if (event.query.isEmpty) {
-          items = await repository.getHistory();
-        } else {
-          items = await repository.search(event.query);
-        }
+        final items = await _fetchItems(
+          searchQuery: event.query,
+          dateFilter: currentState.dateFilter,
+        );
         emit(currentState.copyWith(items: items, searchQuery: event.query));
       } catch (e) {
         emit(ClipboardError(e.toString()));
       }
+    }
+  }
+
+  Future<void> _onDateFilterChanged(
+    ClipboardDateFilterChanged event,
+    Emitter<ClipboardState> emit,
+  ) async {
+    if (state is ClipboardLoaded) {
+      final currentState = state as ClipboardLoaded;
+      try {
+        final items = await _fetchItems(
+          searchQuery: currentState.searchQuery,
+          dateFilter: event.filter,
+        );
+        emit(currentState.copyWith(items: items, dateFilter: event.filter));
+      } catch (e) {
+        emit(ClipboardError(e.toString()));
+      }
+    }
+  }
+
+  Future<void> _onCategoryFilterChanged(
+    ClipboardCategoryFilterChanged event,
+    Emitter<ClipboardState> emit,
+  ) async {
+    if (state is ClipboardLoaded) {
+      final currentState = state as ClipboardLoaded;
+      emit(
+        currentState.copyWith(
+          categoryFilter: event.category,
+          clearCategoryFilter: event.category == null,
+        ),
+      );
     }
   }
 
@@ -117,14 +165,11 @@ class ClipboardBloc extends Bloc<ClipboardEvent, ClipboardState> {
       final currentState = state as ClipboardLoaded;
       try {
         await repository.delete(event.id);
-        
-        // Refresh current view
-        List<ClipboardItem> items;
-        if (currentState.searchQuery.isEmpty) {
-          items = await repository.getHistory();
-        } else {
-          items = await repository.search(currentState.searchQuery);
-        }
+
+        final items = await _fetchItems(
+          searchQuery: currentState.searchQuery,
+          dateFilter: currentState.dateFilter,
+        );
         emit(currentState.copyWith(items: items));
       } catch (e) {
         // Log error
@@ -140,14 +185,11 @@ class ClipboardBloc extends Bloc<ClipboardEvent, ClipboardState> {
       final currentState = state as ClipboardLoaded;
       try {
         await repository.toggleFavorite(event.id);
-        
-        // Refresh current view
-        List<ClipboardItem> items;
-        if (currentState.searchQuery.isEmpty) {
-          items = await repository.getHistory();
-        } else {
-          items = await repository.search(currentState.searchQuery);
-        }
+
+        final items = await _fetchItems(
+          searchQuery: currentState.searchQuery,
+          dateFilter: currentState.dateFilter,
+        );
         emit(currentState.copyWith(items: items));
       } catch (e) {
         // Log error
@@ -185,13 +227,11 @@ class ClipboardBloc extends Bloc<ClipboardEvent, ClipboardState> {
     ClipboardItemSelected event,
     Emitter<ClipboardState> emit,
   ) async {
-    // Copy to clipboard based on type
     if (event.type == 'image') {
       await platform.copyImageToClipboard(event.content);
     } else {
       await platform.copyToClipboard(event.content);
     }
-    // Hide window
     await platform.hideWindow();
   }
 
@@ -206,7 +246,6 @@ class ClipboardBloc extends Bloc<ClipboardEvent, ClipboardState> {
     ClipboardShortcutPressed event,
     Emitter<ClipboardState> emit,
   ) async {
-    // Show window on global shortcut
     await platform.showWindow();
   }
 

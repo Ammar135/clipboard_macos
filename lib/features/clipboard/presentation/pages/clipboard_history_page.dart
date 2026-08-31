@@ -6,7 +6,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/clipboard_bloc.dart';
 import '../bloc/clipboard_event.dart';
 import '../bloc/clipboard_state.dart';
+import '../../domain/entities/clipboard_date_filter.dart';
 import '../widgets/clipboard_item_tile.dart';
+import '../widgets/date_filter_button.dart';
 import '../widgets/search_field.dart';
 
 class ClipboardHistoryPage extends StatefulWidget {
@@ -48,6 +50,24 @@ class _ClipboardHistoryPageState extends State<ClipboardHistoryPage> {
       setState(() => _selectedIndex = 0); // Reset selection on new search
       context.read<ClipboardBloc>().add(ClipboardSearchQueryChanged(query));
     });
+  }
+
+  void _onDateFilterChanged(ClipboardDateFilter filter) {
+    setState(() => _selectedIndex = 0);
+    context.read<ClipboardBloc>().add(ClipboardDateFilterChanged(filter));
+  }
+
+  String _emptyStateMessage(ClipboardLoaded state) {
+    if (state.searchQuery.isNotEmpty && state.dateFilter.isActive) {
+      return 'No results for selected date';
+    }
+    if (state.searchQuery.isNotEmpty) {
+      return 'No results found';
+    }
+    if (state.dateFilter.isActive) {
+      return 'No items for selected date';
+    }
+    return 'Clipboard is empty';
   }
 
   /// Maps a ListView row index to an item index, or null for section headers.
@@ -114,6 +134,21 @@ class _ClipboardHistoryPageState extends State<ClipboardHistoryPage> {
                     focusNode: _searchFocusNode,
                     onChanged: _onSearchChanged,
                   )),
+                  BlocBuilder<ClipboardBloc, ClipboardState>(
+                    buildWhen: (previous, current) =>
+                        current is ClipboardLoaded &&
+                        (previous is! ClipboardLoaded ||
+                            previous.dateFilter != current.dateFilter),
+                    builder: (context, state) {
+                      final filter = state is ClipboardLoaded
+                          ? state.dateFilter
+                          : const ClipboardDateFilterNone();
+                      return DateFilterButton(
+                        currentFilter: filter,
+                        onFilterChanged: _onDateFilterChanged,
+                      );
+                    },
+                  ),
                   IconButton(
                     icon: const Icon(Icons.close),
                     tooltip: 'Close Clipboard',
@@ -141,9 +176,7 @@ class _ClipboardHistoryPageState extends State<ClipboardHistoryPage> {
                       if (state.items.isEmpty) {
                         return Center(
                           child: Text(
-                            state.searchQuery.isEmpty 
-                                ? 'Clipboard is empty' 
-                                : 'No results found',
+                            _emptyStateMessage(state),
                             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),

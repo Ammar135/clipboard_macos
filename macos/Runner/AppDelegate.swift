@@ -2,7 +2,7 @@ import Cocoa
 import FlutterMacOS
 
 @main
-class AppDelegate: FlutterAppDelegate, StatusBarDelegate {
+class AppDelegate: FlutterAppDelegate, StatusBarDelegate, GlobalShortcutDelegate {
   private var statusBarController: StatusBarController?
   private var clipboardMonitor = ClipboardMonitor()
   private var globalShortcut = GlobalShortcut()
@@ -13,6 +13,7 @@ class AppDelegate: FlutterAppDelegate, StatusBarDelegate {
   override func applicationDidFinishLaunching(_ aNotification: Notification) {
     statusBarController = StatusBarController()
     statusBarController?.delegate = self
+    globalShortcut.delegate = self
     
     // Hide the window on startup
     if let window = flutterWindow {
@@ -24,13 +25,67 @@ class AppDelegate: FlutterAppDelegate, StatusBarDelegate {
       setupChannels(binaryMessenger: controller.engine.binaryMessenger)
     }
     
-    // Register Global Shortcut
-    globalShortcut.register()
+    registerGlobalShortcutIfNeeded(promptForAccessibility: true)
     
     super.applicationDidFinishLaunching(aNotification)
   }
-  
 
+  override func applicationDidBecomeActive(_ notification: Notification) {
+    reregisterGlobalShortcut()
+    super.applicationDidBecomeActive(notification)
+  }
+
+  func reregisterGlobalShortcut() {
+    let registered = globalShortcut.registerAll()
+    if !registered {
+      registerGlobalMonitorFallback()
+    }
+  }
+
+  func registerGlobalShortcutIfNeeded(promptForAccessibility: Bool) {
+    reregisterGlobalShortcut()
+
+    if !GlobalShortcut.isAccessibilityGranted && promptForAccessibility {
+      _ = GlobalShortcut.requestAccessibility(prompt: true)
+    }
+  }
+
+  private var globalKeyMonitor: Any?
+
+  private func registerGlobalMonitorFallback() {
+    guard globalKeyMonitor == nil else { return }
+
+    globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+      guard let self = self else { return }
+
+      let flags = event.modifierFlags.intersection([.command, .shift, .option, .control])
+      if flags == [.command, .shift] && event.keyCode == 9 {
+        self.globalShortcutDidPress()
+      }
+    }
+
+    if globalKeyMonitor != nil {
+      NSLog("GlobalShortcut: global monitor fallback registered")
+    }
+  }
+
+  func globalShortcutDidPress() {
+    toggleClipboardWindow()
+  }
+
+  private func toggleClipboardWindow() {
+    guard let window = flutterWindow else {
+      NSLog("toggleClipboardWindow: window not found")
+      return
+    }
+
+    if window.isVisible {
+      window.orderOut(nil)
+    } else {
+      window.makeKeyAndOrderFront(nil)
+      NSApp.activate(ignoringOtherApps: true)
+    }
+  }
   
   private func handleMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
@@ -42,12 +97,35 @@ class AppDelegate: FlutterAppDelegate, StatusBarDelegate {
         result(FlutterError(code: "INVALID_ARGS", message: "Missing content", details: nil))
       }
     case "showWindow":
-      flutterWindow?.makeKeyAndOrderFront(nil)
-      NSApp.activate(ignoringOtherApps: true)
+      if let window = flutterWindow {
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+      }
       result(nil)
     case "hideWindow":
       flutterWindow?.orderOut(nil)
       result(nil)
+    case "toggleWindow":
+      toggleClipboardWindow()
+      result(nil)
+    case "isAccessibilityGranted":
+      result(GlobalShortcut.isAccessibilityGranted)
+    case "isShortcutRegistered":
+      result(globalShortcut.isShortcutActive || globalKeyMonitor != nil)
+    case "requestAccessibility":
+      if !GlobalShortcut.isAccessibilityGranted {
+        _ = GlobalShortcut.requestAccessibility(prompt: true)
+        GlobalShortcut.openAccessibilitySettings()
+      }
+      reregisterGlobalShortcut()
+      result(GlobalShortcut.isAccessibilityGranted)
+    case "reregisterShortcut":
+      reregisterGlobalShortcut()
+      result(globalShortcut.isShortcutActive || globalKeyMonitor != nil)
+    case "getAppBundlePath":
+      result(GlobalShortcut.appBundlePath)
+    case "getExecutablePath":
+      result(GlobalShortcut.executablePath)
     case "setMonitoringEnabled":
       if let args = call.arguments as? [String: Any], let enabled = args["enabled"] as? Bool {
         clipboardMonitor.setPaused(!enabled)
@@ -92,14 +170,7 @@ class AppDelegate: FlutterAppDelegate, StatusBarDelegate {
   // MARK: - StatusBarDelegate
   
   func statusBarDidRequestOpenHistory() {
-    if let window = flutterWindow {
-      if window.isVisible {
-        window.orderOut(nil)
-      } else {
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-      }
-    }
+    toggleClipboardWindow()
   }
   
   func statusBarDidRequestToggleMonitoring() {

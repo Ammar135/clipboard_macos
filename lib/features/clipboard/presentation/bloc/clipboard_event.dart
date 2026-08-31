@@ -1,5 +1,8 @@
 import 'package:equatable/equatable.dart';
 
+import '../../domain/entities/clipboard_date_filter.dart';
+import '../../domain/entities/content_category.dart';
+
 abstract class ClipboardEvent extends Equatable {
   const ClipboardEvent();
 
@@ -31,6 +34,24 @@ class ClipboardSearchQueryChanged extends ClipboardEvent {
 
   @override
   List<Object?> get props => [query];
+}
+
+class ClipboardDateFilterChanged extends ClipboardEvent {
+  final ClipboardDateFilter filter;
+
+  const ClipboardDateFilterChanged(this.filter);
+
+  @override
+  List<Object?> get props => [filter];
+}
+
+class ClipboardCategoryFilterChanged extends ClipboardEvent {
+  final ContentCategory? category;
+
+  const ClipboardCategoryFilterChanged(this.category);
+
+  @override
+  List<Object?> get props => [category];
 }
 
 class ClipboardItemDeleted extends ClipboardEvent {
