@@ -35,10 +35,10 @@ class _ClipboardItemCardState extends State<ClipboardItemCard> {
   bool _isHovered = false;
 
   bool get _showQuickActions =>
-      _isHovered || widget.model.isSelected || widget.model.isPinned;
+      (_isHovered || widget.model.isSelected) &&
+      widget.model.quickActionLabels.isNotEmpty;
 
-  bool get _showAccentBorder =>
-      widget.model.isSelected || widget.model.isPinned;
+  bool get _showAccentBorder => widget.model.isSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +103,10 @@ class _ClipboardItemCardState extends State<ClipboardItemCard> {
         _MoreButton(onTap: widget.onMoreTap),
         if (_showQuickActions) ...[
           const SizedBox(width: 8),
-          QuickActionsMenu(onActionTap: widget.onQuickActionTap),
+          QuickActionsMenu(
+            actions: widget.model.quickActionLabels,
+            onActionTap: widget.onQuickActionTap,
+          ),
         ],
       ],
     );
@@ -117,7 +120,26 @@ class _ClipboardItemCardState extends State<ClipboardItemCard> {
           children: [
             _CategoryBadge(category: widget.model.category, compact: true),
             const Spacer(),
+            if (widget.model.isPinned)
+              GestureDetector(
+                onTap: widget.onFavoriteTap,
+                child: const Padding(
+                  padding: EdgeInsets.only(right: 4),
+                  child: Icon(
+                    CupertinoIcons.star_fill,
+                    size: 12,
+                    color: Color(0xFFFFB340),
+                  ),
+                ),
+              ),
             _MoreButton(onTap: widget.onMoreTap),
+            if (_showQuickActions) ...[
+              const SizedBox(width: 6),
+              QuickActionsMenu(
+                actions: widget.model.quickActionLabels,
+                onActionTap: widget.onQuickActionTap,
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 8),

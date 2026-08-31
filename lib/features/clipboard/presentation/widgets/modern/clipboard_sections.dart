@@ -12,7 +12,7 @@ typedef ClipboardQuickActionCallback = void Function(
 );
 
 class ClipboardPinnedSection extends StatelessWidget {
-  final List<ClipboardCardUiModel> items;
+  final ClipboardPanelSectionUiModel section;
   final ClipboardCardCallback? onItemTap;
   final ClipboardCardCallback? onFavoriteTap;
   final ClipboardCardCallback? onMoreTap;
@@ -20,7 +20,7 @@ class ClipboardPinnedSection extends StatelessWidget {
 
   const ClipboardPinnedSection({
     super.key,
-    required this.items,
+    required this.section,
     this.onItemTap,
     this.onFavoriteTap,
     this.onMoreTap,
@@ -29,34 +29,19 @@ class ClipboardPinnedSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
+    if (section.isEmpty) {
       return const SizedBox.shrink();
     }
 
     return Column(
       children: [
         const SectionDivider(label: 'PINNED'),
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: ClipboardUiDimensions.contentPadding,
-          ),
-          child: Column(
-            children: [
-              for (var i = 0; i < items.length; i++) ...[
-                if (i > 0) const SizedBox(height: ClipboardUiDimensions.gridSpacing),
-                ClipboardItemCard(
-                  model: items[i],
-                  onTap: onItemTap == null ? null : () => onItemTap!(items[i]),
-                  onFavoriteTap:
-                      onFavoriteTap == null ? null : () => onFavoriteTap!(items[i]),
-                  onMoreTap: onMoreTap == null ? null : () => onMoreTap!(items[i]),
-                  onQuickActionTap: onQuickActionTap == null
-                      ? null
-                      : (label) => onQuickActionTap!(items[i], label),
-                ),
-              ],
-            ],
-          ),
+        ClipboardSectionItems(
+          section: section,
+          onItemTap: onItemTap,
+          onFavoriteTap: onFavoriteTap,
+          onMoreTap: onMoreTap,
+          onQuickActionTap: onQuickActionTap,
         ),
       ],
     );
@@ -86,48 +71,75 @@ class ClipboardRecentSections extends StatelessWidget {
         for (final section in sections)
           if (!section.isEmpty) ...[
             SectionDivider(label: section.label),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: ClipboardUiDimensions.contentPadding,
-              ),
-              child: Column(
-                children: [
-                  for (var i = 0; i < section.listItems.length; i++) ...[
-                    if (i > 0)
-                      const SizedBox(height: ClipboardUiDimensions.gridSpacing),
-                    _buildCard(section.listItems[i]),
-                  ],
-                  if (section.listItems.isNotEmpty && section.gridItems.isNotEmpty)
-                    const SizedBox(height: ClipboardUiDimensions.gridSpacing),
-                  if (section.gridItems.isNotEmpty)
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        const crossAxisCount = 3;
-                        const spacing = ClipboardUiDimensions.gridSpacing;
-                        final tileWidth = (constraints.maxWidth -
-                                (spacing * (crossAxisCount - 1))) /
-                            crossAxisCount;
-
-                        return Wrap(
-                          spacing: spacing,
-                          runSpacing: spacing,
-                          children: section.gridItems
-                              .map(
-                                (item) => SizedBox(
-                                  width: tileWidth,
-                                  height: 118,
-                                  child: _buildCard(item),
-                                ),
-                              )
-                              .toList(),
-                        );
-                      },
-                    ),
-                ],
-              ),
+            ClipboardSectionItems(
+              section: section,
+              onItemTap: onItemTap,
+              onFavoriteTap: onFavoriteTap,
+              onMoreTap: onMoreTap,
+              onQuickActionTap: onQuickActionTap,
             ),
           ],
       ],
+    );
+  }
+}
+
+class ClipboardSectionItems extends StatelessWidget {
+  final ClipboardPanelSectionUiModel section;
+  final ClipboardCardCallback? onItemTap;
+  final ClipboardCardCallback? onFavoriteTap;
+  final ClipboardCardCallback? onMoreTap;
+  final ClipboardQuickActionCallback? onQuickActionTap;
+
+  const ClipboardSectionItems({
+    super.key,
+    required this.section,
+    this.onItemTap,
+    this.onFavoriteTap,
+    this.onMoreTap,
+    this.onQuickActionTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: ClipboardUiDimensions.contentPadding,
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < section.listItems.length; i++) ...[
+            if (i > 0) const SizedBox(height: ClipboardUiDimensions.gridSpacing),
+            _buildCard(section.listItems[i]),
+          ],
+          if (section.listItems.isNotEmpty && section.gridItems.isNotEmpty)
+            const SizedBox(height: ClipboardUiDimensions.gridSpacing),
+          if (section.gridItems.isNotEmpty)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                const crossAxisCount = 3;
+                const spacing = ClipboardUiDimensions.gridSpacing;
+                final tileWidth =
+                    (constraints.maxWidth - (spacing * (crossAxisCount - 1))) /
+                        crossAxisCount;
+
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: section.gridItems
+                      .map(
+                        (item) => SizedBox(
+                          width: tileWidth,
+                          height: 118,
+                          child: _buildCard(item),
+                        ),
+                      )
+                      .toList(),
+                );
+              },
+            ),
+        ],
+      ),
     );
   }
 
@@ -137,8 +149,9 @@ class ClipboardRecentSections extends StatelessWidget {
       onTap: onItemTap == null ? null : () => onItemTap!(item),
       onFavoriteTap: onFavoriteTap == null ? null : () => onFavoriteTap!(item),
       onMoreTap: onMoreTap == null ? null : () => onMoreTap!(item),
-      onQuickActionTap:
-          onQuickActionTap == null ? null : (label) => onQuickActionTap!(item, label),
+      onQuickActionTap: onQuickActionTap == null
+          ? null
+          : (label) => onQuickActionTap!(item, label),
     );
   }
 }

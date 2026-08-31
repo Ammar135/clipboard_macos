@@ -10,7 +10,7 @@ class QuickActionsMenu extends StatelessWidget {
 
   const QuickActionsMenu({
     super.key,
-    this.actions = const ['Open', 'Copy'],
+    required this.actions,
     this.onActionTap,
   });
 

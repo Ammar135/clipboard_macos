@@ -19,6 +19,7 @@ class ClipboardCardUiModel extends Equatable {
   final ClipboardCardLayout layout;
   final String? colorHex;
   final String? imagePath;
+  final List<String> quickActionLabels;
 
   const ClipboardCardUiModel({
     required this.itemId,
@@ -32,6 +33,7 @@ class ClipboardCardUiModel extends Equatable {
     this.layout = ClipboardCardLayout.list,
     this.colorHex,
     this.imagePath,
+    this.quickActionLabels = const [],
   });
 
   String get metaLabel => '$sourceApp · $timestampLabel';
@@ -49,6 +51,7 @@ class ClipboardCardUiModel extends Equatable {
         layout,
         colorHex,
         imagePath,
+        quickActionLabels,
       ];
 }
 
@@ -88,19 +91,19 @@ class ClipboardPanelSectionUiModel extends Equatable {
 
 class ClipboardPanelViewData extends Equatable {
   final List<ClipboardCategoryChipUiModel> categoryChips;
-  final List<ClipboardCardUiModel> pinnedItems;
+  final ClipboardPanelSectionUiModel pinnedSection;
   final List<ClipboardPanelSectionUiModel> sections;
   final int totalItemCount;
 
   const ClipboardPanelViewData({
     required this.categoryChips,
-    required this.pinnedItems,
+    required this.pinnedSection,
     required this.sections,
     required this.totalItemCount,
   });
 
-  bool get isEmpty => pinnedItems.isEmpty && sections.every((s) => s.isEmpty);
+  bool get isEmpty => pinnedSection.isEmpty && sections.every((s) => s.isEmpty);
 
   @override
-  List<Object?> get props => [categoryChips, pinnedItems, sections, totalItemCount];
+  List<Object?> get props => [categoryChips, pinnedSection, sections, totalItemCount];
 }

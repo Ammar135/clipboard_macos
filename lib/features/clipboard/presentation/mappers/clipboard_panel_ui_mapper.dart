@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/actions/quick_action_resolver.dart';
 import '../../domain/entities/clipboard_item.dart';
 import '../../domain/entities/content_category.dart';
 import '../models/clipboard_card_ui_model.dart';
 import '../utils/clipboard_timestamp_formatter.dart';
 
 class ClipboardPanelUiMapper {
+  static final _quickActionResolver = QuickActionResolver();
+
   static const _chipDefinitions = <({String label, ContentCategory? category})>[
     (label: 'All', category: null),
     (label: 'Text', category: ContentCategory.text),
@@ -26,12 +29,19 @@ class ClipboardPanelUiMapper {
         ? items
         : items.where((item) => item.category == categoryFilter).toList();
 
-    final pinned = <ClipboardCardUiModel>[];
+    final pinnedListItems = <ClipboardCardUiModel>[];
+    final pinnedGridItems = <ClipboardCardUiModel>[];
     final recentByDay = <String, List<ClipboardItem>>{};
 
     for (final item in filtered) {
       if (item.isFavorite) {
-        pinned.add(_toCard(item, selectedItemId, locale, ClipboardCardLayout.list));
+        final layout = _layoutFor(item.category);
+        final card = _toCard(item, selectedItemId, locale, layout);
+        if (layout == ClipboardCardLayout.grid) {
+          pinnedGridItems.add(card);
+        } else {
+          pinnedListItems.add(card);
+        }
       } else {
         final key = _dayKey(item.createdAt);
         recentByDay.putIfAbsent(key, () => []).add(item);
@@ -76,7 +86,11 @@ class ClipboardPanelUiMapper {
             ),
           )
           .toList(),
-      pinnedItems: pinned,
+      pinnedSection: ClipboardPanelSectionUiModel(
+        label: 'PINNED',
+        listItems: pinnedListItems,
+        gridItems: pinnedGridItems,
+      ),
       sections: sections,
       totalItemCount: filtered.length,
     );
@@ -107,6 +121,10 @@ class ClipboardPanelUiMapper {
       layout: layout,
       colorHex: item.category == ContentCategory.color ? item.content.trim() : null,
       imagePath: item.isImage ? item.content : null,
+      quickActionLabels: _quickActionResolver
+          .resolve(item)
+          .map((action) => action.label)
+          .toList(),
     );
   }
 

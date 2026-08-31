@@ -36,18 +36,6 @@ class QuickActionResolver {
           payload: item.content,
         ),
       ],
-      ContentCategory.color => [
-        ClipboardQuickAction(
-          type: ClipboardQuickActionType.copyHex,
-          label: 'Copy HEX',
-          payload: _colorHex(item.content),
-        ),
-        ClipboardQuickAction(
-          type: ClipboardQuickActionType.previewColor,
-          label: 'Preview',
-          payload: item.content,
-        ),
-      ],
       ContentCategory.code => [
         ClipboardQuickAction(
           type: ClipboardQuickActionType.copyText,
@@ -57,13 +45,5 @@ class QuickActionResolver {
       ],
       _ => const [],
     };
-  }
-
-  String _colorHex(String value) {
-    final trimmed = value.trim();
-    if (trimmed.startsWith('#')) {
-      return trimmed.toUpperCase();
-    }
-    return trimmed;
   }
 }

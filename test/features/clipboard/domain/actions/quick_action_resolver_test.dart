@@ -32,11 +32,15 @@ void main() {
     expect(actions.map((action) => action.label), ['Email', 'Copy']);
   });
 
-  test('returns no actions for plain text', () {
-    final actions = resolver.resolve(
+  test('returns no actions for plain text and color', () {
+    final textActions = resolver.resolve(
       item(ContentCategory.text, 'hello'),
     );
+    final colorActions = resolver.resolve(
+      item(ContentCategory.color, '#FF5733'),
+    );
 
-    expect(actions, isEmpty);
+    expect(textActions, isEmpty);
+    expect(colorActions, isEmpty);
   });
 }

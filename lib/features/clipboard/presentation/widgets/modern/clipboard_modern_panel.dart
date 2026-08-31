@@ -10,7 +10,7 @@ import 'glass_panel.dart';
 
 class ClipboardModernPanel extends StatelessWidget {
   final List<ClipboardCategoryChipUiModel> categoryChips;
-  final List<ClipboardCardUiModel> pinnedItems;
+  final ClipboardPanelSectionUiModel pinnedSection;
   final List<ClipboardPanelSectionUiModel> sections;
   final int totalItemCount;
   final bool isFilterActive;
@@ -30,7 +30,7 @@ class ClipboardModernPanel extends StatelessWidget {
   const ClipboardModernPanel({
     super.key,
     required this.categoryChips,
-    required this.pinnedItems,
+    required this.pinnedSection,
     required this.sections,
     required this.totalItemCount,
     this.isFilterActive = false,
@@ -49,7 +49,7 @@ class ClipboardModernPanel extends StatelessWidget {
   });
 
   bool get _isEmpty =>
-      pinnedItems.isEmpty && sections.every((section) => section.isEmpty);
+      pinnedSection.isEmpty && sections.every((section) => section.isEmpty);
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +84,7 @@ class ClipboardModernPanel extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 8),
                     children: [
                       ClipboardPinnedSection(
-                        items: pinnedItems,
+                        section: pinnedSection,
                         onItemTap: onItemTap,
                         onFavoriteTap: onFavoriteTap,
                         onMoreTap: onMoreTap,

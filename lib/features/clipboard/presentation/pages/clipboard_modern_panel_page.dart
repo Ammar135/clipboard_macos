@@ -162,7 +162,8 @@ class _ClipboardModernPanelPageState extends State<ClipboardModernPanelPage> {
               if (event is! KeyDownEvent) return;
 
               final flatCards = <ClipboardCardUiModel>[
-                ...viewData.pinnedItems,
+                ...viewData.pinnedSection.listItems,
+                ...viewData.pinnedSection.gridItems,
                 for (final section in viewData.sections) ...[
                   ...section.listItems,
                   ...section.gridItems,
@@ -202,7 +203,7 @@ class _ClipboardModernPanelPageState extends State<ClipboardModernPanelPage> {
               alignment: Alignment.center,
               child: ClipboardModernPanel(
                 categoryChips: viewData.categoryChips,
-                pinnedItems: viewData.pinnedItems,
+                pinnedSection: viewData.pinnedSection,
                 sections: viewData.sections,
                 totalItemCount: viewData.totalItemCount,
                 isFilterActive: state.dateFilter.isActive,

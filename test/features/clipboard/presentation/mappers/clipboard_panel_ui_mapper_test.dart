@@ -39,8 +39,8 @@ void main() {
       locale: const Locale('en'),
     );
 
-    expect(viewData.pinnedItems, hasLength(1));
-    expect(viewData.pinnedItems.first.itemId, 1);
+    expect(viewData.pinnedSection.listItems, hasLength(1));
+    expect(viewData.pinnedSection.listItems.first.itemId, 1);
     expect(viewData.sections, hasLength(1));
     expect(viewData.sections.first.listItems, hasLength(1));
     expect(viewData.sections.first.listItems.first.isSelected, isTrue);
@@ -91,6 +91,13 @@ void main() {
         createdAt: now,
         isFavorite: false,
       ),
+      ClipboardItem(
+        id: 2,
+        content: '#FF5733',
+        category: ContentCategory.color,
+        createdAt: now,
+        isFavorite: false,
+      ),
     ];
 
     final viewData = ClipboardPanelUiMapper.map(
@@ -100,10 +107,67 @@ void main() {
       locale: const Locale('en'),
     );
 
-    expect(viewData.sections.first.gridItems, hasLength(1));
+    expect(viewData.sections.first.gridItems, hasLength(2));
     expect(
-      viewData.sections.first.gridItems.first.layout,
+      viewData.sections.first.gridItems.last.layout,
       ClipboardCardLayout.grid,
     );
+  });
+
+  test('pinned items keep category layout', () {
+    final now = DateTime.now();
+    final items = [
+      ClipboardItem(
+        id: 1,
+        content: 'const x = 1;',
+        category: ContentCategory.code,
+        createdAt: now,
+        isFavorite: true,
+      ),
+    ];
+
+    final viewData = ClipboardPanelUiMapper.map(
+      items: items,
+      categoryFilter: null,
+      selectedItemId: null,
+      locale: const Locale('en'),
+    );
+
+    expect(viewData.pinnedSection.gridItems, hasLength(1));
+    expect(
+      viewData.pinnedSection.gridItems.first.layout,
+      ClipboardCardLayout.grid,
+    );
+  });
+
+  test('maps quick actions per category', () {
+    final now = DateTime.now();
+    final urlItem = ClipboardItem(
+      id: 1,
+      content: 'https://example.com',
+      category: ContentCategory.url,
+      createdAt: now,
+      isFavorite: false,
+    );
+    final textItem = ClipboardItem(
+      id: 2,
+      content: 'hello',
+      category: ContentCategory.text,
+      createdAt: now,
+      isFavorite: false,
+    );
+
+    final viewData = ClipboardPanelUiMapper.map(
+      items: [urlItem, textItem],
+      categoryFilter: null,
+      selectedItemId: null,
+      locale: const Locale('en'),
+    );
+
+    expect(
+      viewData.sections.first.listItems.first.quickActionLabels,
+      ['Open', 'Copy'],
+    );
+    expect(viewData.sections.first.listItems.last.quickActionLabels, isEmpty);
   });
 }
