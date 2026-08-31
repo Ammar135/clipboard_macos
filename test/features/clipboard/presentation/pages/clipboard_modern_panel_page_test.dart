@@ -56,6 +56,7 @@ void main() {
     when(() => mockPlatform.isShortcutRegistered()).thenAnswer((_) async => true);
     when(() => mockPlatform.reregisterShortcut()).thenAnswer((_) async {});
     when(() => mockPlatform.getAppBundlePath()).thenAnswer((_) async => '/Applications/clipboard_project.app');
+    when(() => mockPlatform.getExecutablePath()).thenAnswer((_) async => '/Applications/clipboard_project.app/Contents/MacOS/clipboard_project');
     when(() => mockPlatform.showWindow()).thenAnswer((_) async {});
     when(() => mockPlatform.hideWindow()).thenAnswer((_) async {});
 

@@ -24,6 +24,8 @@ abstract interface class ClipboardPlatform {
 
   Future<String> getAppBundlePath();
 
+  Future<String> getExecutablePath();
+
   Future<void> openUrl(String url);
 
   Future<void> openEmail(String email);

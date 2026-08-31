@@ -34,13 +34,15 @@ class ClipboardSettingsPanel extends StatelessWidget {
   });
 
   String get _shortcutStatusLabel {
-    if (!accessibilityGranted) {
-      return 'Accessibility permission required';
-    }
     if (shortcutRegistered) {
-      return 'Shortcut is active system-wide';
+      return accessibilityGranted
+          ? 'Shortcut is active system-wide'
+          : 'Shortcut is active (hotkey registered)';
     }
-    return 'Permission granted, shortcut pending — return here after enabling';
+    if (!accessibilityGranted) {
+      return 'Shortcut not active — enable Accessibility for this exact .app build';
+    }
+    return 'Accessibility granted — quit and reopen the app once';
   }
 
   @override
@@ -77,11 +79,11 @@ class ClipboardSettingsPanel extends StatelessWidget {
                     title: 'Open clipboard panel',
                     value: ClipboardAppShortcuts.openPanel,
                     subtitle: _shortcutStatusLabel,
-                    statusColor: shortcutRegistered && accessibilityGranted
+                    statusColor: shortcutRegistered
                         ? const Color(0xFF34C759)
                         : ClipboardUiColors.textSecondary,
                   ),
-                  if (!accessibilityGranted || !shortcutRegistered) ...[
+                  if (!shortcutRegistered) ...[
                     const Divider(height: 1, color: ClipboardUiColors.divider),
                     _SettingsActionRow(
                       title: 'Open Accessibility Settings',
@@ -110,9 +112,10 @@ class ClipboardSettingsPanel extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '1. Click + and choose clipboard_project.app\n'
-                              '2. Turn the toggle ON\n'
-                              '3. Come back here — shortcut activates automatically',
+                              '1. Remove any old clipboard_project entries\n'
+                              '2. Click + and select this exact .app file\n'
+                              '3. Turn the toggle ON\n'
+                              '4. Quit and reopen the app (required after release builds)',
                               style: ClipboardUiTypography.cardMeta(),
                             ),
                           ],

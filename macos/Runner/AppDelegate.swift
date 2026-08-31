@@ -36,25 +36,16 @@ class AppDelegate: FlutterAppDelegate, StatusBarDelegate, GlobalShortcutDelegate
   }
 
   func reregisterGlobalShortcut() {
-    globalShortcut.unregister()
-
-    guard GlobalShortcut.isAccessibilityGranted else {
-      NSLog("GlobalShortcut: waiting for accessibility permission")
-      return
-    }
-
-    if !globalShortcut.register() {
+    let registered = globalShortcut.registerAll()
+    if !registered {
       registerGlobalMonitorFallback()
     }
   }
 
   func registerGlobalShortcutIfNeeded(promptForAccessibility: Bool) {
-    if GlobalShortcut.isAccessibilityGranted {
-      reregisterGlobalShortcut()
-      return
-    }
+    reregisterGlobalShortcut()
 
-    if promptForAccessibility {
+    if !GlobalShortcut.isAccessibilityGranted && promptForAccessibility {
       _ = GlobalShortcut.requestAccessibility(prompt: true)
     }
   }
@@ -120,7 +111,7 @@ class AppDelegate: FlutterAppDelegate, StatusBarDelegate, GlobalShortcutDelegate
     case "isAccessibilityGranted":
       result(GlobalShortcut.isAccessibilityGranted)
     case "isShortcutRegistered":
-      result(globalShortcut.isRegistered || globalKeyMonitor != nil)
+      result(globalShortcut.isShortcutActive || globalKeyMonitor != nil)
     case "requestAccessibility":
       if !GlobalShortcut.isAccessibilityGranted {
         _ = GlobalShortcut.requestAccessibility(prompt: true)
@@ -130,9 +121,11 @@ class AppDelegate: FlutterAppDelegate, StatusBarDelegate, GlobalShortcutDelegate
       result(GlobalShortcut.isAccessibilityGranted)
     case "reregisterShortcut":
       reregisterGlobalShortcut()
-      result(globalShortcut.isRegistered || globalKeyMonitor != nil)
+      result(globalShortcut.isShortcutActive || globalKeyMonitor != nil)
     case "getAppBundlePath":
       result(GlobalShortcut.appBundlePath)
+    case "getExecutablePath":
+      result(GlobalShortcut.executablePath)
     case "setMonitoringEnabled":
       if let args = call.arguments as? [String: Any], let enabled = args["enabled"] as? Bool {
         clipboardMonitor.setPaused(!enabled)

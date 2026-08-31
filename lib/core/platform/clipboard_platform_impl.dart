@@ -90,6 +90,14 @@ class ClipboardPlatformImpl implements ClipboardPlatform {
   }
 
   @override
+  Future<String> getExecutablePath() async {
+    if (!Platform.isMacOS) return '';
+    final result =
+        await _methodChannel.invokeMethod<String>('getExecutablePath');
+    return result ?? '';
+  }
+
+  @override
   Future<void> copyImageToClipboard(String path) async {
     await _methodChannel.invokeMethod('copyImageToClipboard', {'path': path});
   }
