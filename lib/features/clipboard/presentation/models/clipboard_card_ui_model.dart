@@ -72,21 +72,19 @@ class ClipboardCategoryChipUiModel extends Equatable {
 
 class ClipboardPanelSectionUiModel extends Equatable {
   final String label;
-  final List<ClipboardCardUiModel> listItems;
-  final List<ClipboardCardUiModel> gridItems;
+  final List<ClipboardCardUiModel> items;
 
   const ClipboardPanelSectionUiModel({
     required this.label,
-    this.listItems = const [],
-    this.gridItems = const [],
+    this.items = const [],
   });
 
-  int get itemCount => listItems.length + gridItems.length;
+  int get itemCount => items.length;
 
-  bool get isEmpty => itemCount == 0;
+  bool get isEmpty => items.isEmpty;
 
   @override
-  List<Object?> get props => [label, listItems, gridItems];
+  List<Object?> get props => [label, items];
 }
 
 class ClipboardPanelViewData extends Equatable {

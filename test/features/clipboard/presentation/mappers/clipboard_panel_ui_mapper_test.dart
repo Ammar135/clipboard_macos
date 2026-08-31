@@ -39,11 +39,11 @@ void main() {
       locale: const Locale('en'),
     );
 
-    expect(viewData.pinnedSection.listItems, hasLength(1));
-    expect(viewData.pinnedSection.listItems.first.itemId, 1);
+    expect(viewData.pinnedSection.items, hasLength(1));
+    expect(viewData.pinnedSection.items.first.itemId, 1);
     expect(viewData.sections, hasLength(1));
-    expect(viewData.sections.first.listItems, hasLength(1));
-    expect(viewData.sections.first.listItems.first.isSelected, isTrue);
+    expect(viewData.sections.first.items, hasLength(1));
+    expect(viewData.sections.first.items.first.isSelected, isTrue);
     expect(viewData.totalItemCount, 2);
     expect(
       viewData.categoryChips.firstWhere((chip) => chip.label == 'All').isActive,
@@ -78,7 +78,7 @@ void main() {
     );
 
     expect(viewData.totalItemCount, 1);
-    expect(viewData.sections.first.listItems.single.category, ContentCategory.url);
+    expect(viewData.sections.first.items.single.category, ContentCategory.url);
   });
 
   test('uses grid layout for code, color, and image categories', () {
@@ -107,9 +107,9 @@ void main() {
       locale: const Locale('en'),
     );
 
-    expect(viewData.sections.first.gridItems, hasLength(2));
+    expect(viewData.sections.first.items, hasLength(2));
     expect(
-      viewData.sections.first.gridItems.last.layout,
+      viewData.sections.first.items.last.layout,
       ClipboardCardLayout.grid,
     );
   });
@@ -133,11 +133,61 @@ void main() {
       locale: const Locale('en'),
     );
 
-    expect(viewData.pinnedSection.gridItems, hasLength(1));
+    expect(viewData.pinnedSection.items, hasLength(1));
     expect(
-      viewData.pinnedSection.gridItems.first.layout,
+      viewData.pinnedSection.items.first.layout,
       ClipboardCardLayout.grid,
     );
+  });
+
+  test('keeps chronological order when mixing list and grid layouts', () {
+    final now = DateTime.now();
+    final items = [
+      ClipboardItem(
+        id: 1,
+        content: 'newest text',
+        category: ContentCategory.text,
+        createdAt: now,
+        isFavorite: false,
+      ),
+      ClipboardItem(
+        id: 2,
+        content: '#FF5733',
+        category: ContentCategory.color,
+        createdAt: now.subtract(const Duration(minutes: 1)),
+        isFavorite: false,
+      ),
+      ClipboardItem(
+        id: 3,
+        content: 'older text',
+        category: ContentCategory.text,
+        createdAt: now.subtract(const Duration(minutes: 2)),
+        isFavorite: false,
+      ),
+      ClipboardItem(
+        id: 4,
+        content: '/tmp/image.png',
+        category: ContentCategory.image,
+        createdAt: now.subtract(const Duration(minutes: 3)),
+        isFavorite: false,
+      ),
+    ];
+
+    final viewData = ClipboardPanelUiMapper.map(
+      items: items,
+      categoryFilter: null,
+      selectedItemId: null,
+      locale: const Locale('en'),
+    );
+
+    expect(
+      viewData.sections.first.items.map((item) => item.itemId).toList(),
+      [1, 2, 3, 4],
+    );
+    expect(viewData.sections.first.items[0].layout, ClipboardCardLayout.list);
+    expect(viewData.sections.first.items[1].layout, ClipboardCardLayout.grid);
+    expect(viewData.sections.first.items[2].layout, ClipboardCardLayout.list);
+    expect(viewData.sections.first.items[3].layout, ClipboardCardLayout.grid);
   });
 
   test('maps quick actions per category', () {
@@ -165,9 +215,9 @@ void main() {
     );
 
     expect(
-      viewData.sections.first.listItems.first.quickActionLabels,
+      viewData.sections.first.items.first.quickActionLabels,
       ['Open', 'Copy'],
     );
-    expect(viewData.sections.first.listItems.last.quickActionLabels, isEmpty);
+    expect(viewData.sections.first.items.last.quickActionLabels, isEmpty);
   });
 }
