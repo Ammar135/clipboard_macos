@@ -23,9 +23,10 @@ class ClipboardModernPanel extends StatelessWidget {
   final ValueChanged<ClipboardCategoryChipUiModel>? onCategoryChipTap;
   final ClipboardCardCallback? onItemTap;
   final ClipboardCardCallback? onFavoriteTap;
-  final ClipboardCardCallback? onMoreTap;
+  final ClipboardMoreTapCallback? onMoreTap;
   final ClipboardQuickActionCallback? onQuickActionTap;
   final VoidCallback? onClearHistoryTap;
+  final VoidCallback? onSettingsTap;
 
   const ClipboardModernPanel({
     super.key,
@@ -46,6 +47,7 @@ class ClipboardModernPanel extends StatelessWidget {
     this.onMoreTap,
     this.onQuickActionTap,
     this.onClearHistoryTap,
+    this.onSettingsTap,
   });
 
   bool get _isEmpty =>
@@ -62,6 +64,7 @@ class ClipboardModernPanel extends StatelessWidget {
             onSearchChanged: onSearchChanged,
             isFilterActive: isFilterActive,
             dateFilterButton: dateFilterButton,
+            onSettingsTap: onSettingsTap,
             onCloseTap: onCloseTap,
           ),
           const SizedBox(height: 4),

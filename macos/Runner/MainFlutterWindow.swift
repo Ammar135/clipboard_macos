@@ -1,7 +1,7 @@
 import Cocoa
 import FlutterMacOS
 
-class MainFlutterWindow: NSPanel {
+class MainFlutterWindow: NSPanel, NSWindowDelegate {
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
     let windowFrame = NSRect(x: 0, y: 0, width: 450, height: 600)
@@ -20,11 +20,14 @@ class MainFlutterWindow: NSPanel {
     
     self.center()
 
+    self.delegate = self
+
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
       appDelegate.setupChannels(binaryMessenger: flutterViewController.engine.binaryMessenger)
       appDelegate.setMainFlutterViewController(flutterViewController)
+      appDelegate.registerGlobalShortcutIfNeeded(promptForAccessibility: false)
     }
 
     super.awakeFromNib()
@@ -37,5 +40,10 @@ class MainFlutterWindow: NSPanel {
   
   override var canBecomeMain: Bool {
       return true
+  }
+
+  func windowShouldClose(_ sender: NSWindow) -> Bool {
+    orderOut(nil)
+    return false
   }
 }

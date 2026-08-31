@@ -14,6 +14,16 @@ abstract interface class ClipboardPlatform {
   
   Future<void> setMonitoringEnabled(bool enabled);
 
+  Future<bool> isAccessibilityGranted();
+
+  Future<bool> requestAccessibility();
+
+  Future<bool> isShortcutRegistered();
+
+  Future<void> reregisterShortcut();
+
+  Future<String> getAppBundlePath();
+
   Future<void> openUrl(String url);
 
   Future<void> openEmail(String email);

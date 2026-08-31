@@ -5,6 +5,7 @@ import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/database/database.dart';
+import 'core/platform/clipboard_platform.dart';
 import 'core/platform/clipboard_platform_impl.dart';
 import 'features/clipboard/data/repositories/clipboard_repository_impl.dart';
 import 'features/clipboard/domain/actions/execute_quick_action.dart';
@@ -57,17 +58,20 @@ Future<void> main() async {
   final executeQuickAction = ExecuteQuickAction(platform);
 
   runApp(
-    RepositoryProvider.value(
-      value: quickActionResolver,
+    RepositoryProvider<ClipboardPlatform>.value(
+      value: platform,
       child: RepositoryProvider.value(
-        value: executeQuickAction,
-        child: BlocProvider(
-          create: (context) => ClipboardBloc(
-            repository: repository,
-            platform: platform,
-            addClipboardItem: addClipboardItem,
-          )..add(ClipboardLoadHistory()),
-          child: const MyApp(),
+        value: quickActionResolver,
+        child: RepositoryProvider.value(
+          value: executeQuickAction,
+          child: BlocProvider(
+            create: (context) => ClipboardBloc(
+              repository: repository,
+              platform: platform,
+              addClipboardItem: addClipboardItem,
+            )..add(ClipboardLoadHistory()),
+            child: const MyApp(),
+          ),
         ),
       ),
     ),

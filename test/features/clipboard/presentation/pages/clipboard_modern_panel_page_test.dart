@@ -49,13 +49,26 @@ void main() {
   });
 
   Widget buildTestApp(ClipboardBloc bloc) {
-    return RepositoryProvider<QuickActionResolver>(
-      create: (_) => QuickActionResolver(),
-      child: RepositoryProvider<ExecuteQuickAction>(
-        create: (_) => ExecuteQuickAction(mockPlatform),
-        child: BlocProvider<ClipboardBloc>.value(
-          value: bloc,
-          child: const MaterialApp(home: ClipboardModernPanelPage()),
+    when(() => mockPlatform.getLaunchAtLogin()).thenAnswer((_) async => false);
+    when(() => mockPlatform.setLaunchAtLogin(any())).thenAnswer((_) async {});
+    when(() => mockPlatform.isAccessibilityGranted()).thenAnswer((_) async => true);
+    when(() => mockPlatform.requestAccessibility()).thenAnswer((_) async => true);
+    when(() => mockPlatform.isShortcutRegistered()).thenAnswer((_) async => true);
+    when(() => mockPlatform.reregisterShortcut()).thenAnswer((_) async {});
+    when(() => mockPlatform.getAppBundlePath()).thenAnswer((_) async => '/Applications/clipboard_project.app');
+    when(() => mockPlatform.showWindow()).thenAnswer((_) async {});
+    when(() => mockPlatform.hideWindow()).thenAnswer((_) async {});
+
+    return RepositoryProvider<ClipboardPlatform>.value(
+      value: mockPlatform,
+      child: RepositoryProvider<QuickActionResolver>(
+        create: (_) => QuickActionResolver(),
+        child: RepositoryProvider<ExecuteQuickAction>(
+          create: (_) => ExecuteQuickAction(mockPlatform),
+          child: BlocProvider<ClipboardBloc>.value(
+            value: bloc,
+            child: const MaterialApp(home: ClipboardModernPanelPage()),
+          ),
         ),
       ),
     );

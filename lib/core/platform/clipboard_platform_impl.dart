@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -47,6 +49,44 @@ class ClipboardPlatformImpl implements ClipboardPlatform {
   @override
   Future<void> setMonitoringEnabled(bool enabled) async {
     await _methodChannel.invokeMethod('setMonitoringEnabled', {'enabled': enabled});
+  }
+
+  @override
+  Future<bool> isAccessibilityGranted() async {
+    if (!Platform.isMacOS) return false;
+    final result =
+        await _methodChannel.invokeMethod<bool>('isAccessibilityGranted');
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> requestAccessibility() async {
+    if (!Platform.isMacOS) return false;
+    final result =
+        await _methodChannel.invokeMethod<bool>('requestAccessibility');
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> isShortcutRegistered() async {
+    if (!Platform.isMacOS) return false;
+    final result =
+        await _methodChannel.invokeMethod<bool>('isShortcutRegistered');
+    return result ?? false;
+  }
+
+  @override
+  Future<void> reregisterShortcut() async {
+    if (!Platform.isMacOS) return;
+    await _methodChannel.invokeMethod('reregisterShortcut');
+  }
+
+  @override
+  Future<String> getAppBundlePath() async {
+    if (!Platform.isMacOS) return '';
+    final result =
+        await _methodChannel.invokeMethod<String>('getAppBundlePath');
+    return result ?? '';
   }
 
   @override

@@ -15,7 +15,7 @@ class ClipboardItemCard extends StatefulWidget {
   final ClipboardCardUiModel model;
   final VoidCallback? onTap;
   final VoidCallback? onFavoriteTap;
-  final VoidCallback? onMoreTap;
+  final ValueChanged<Rect>? onMoreTap;
   final ValueChanged<String>? onQuickActionTap;
 
   const ClipboardItemCard({
@@ -221,7 +221,7 @@ class _CategoryBadge extends StatelessWidget {
 }
 
 class _MoreButton extends StatelessWidget {
-  final VoidCallback? onTap;
+  final ValueChanged<Rect>? onTap;
 
   const _MoreButton({this.onTap});
 
@@ -230,7 +230,13 @@ class _MoreButton extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: onTap == null
+            ? null
+            : () {
+                final box = context.findRenderObject() as RenderBox?;
+                if (box == null || !box.hasSize) return;
+                onTap!(box.localToGlobal(Offset.zero) & box.size);
+              },
         borderRadius: BorderRadius.circular(4),
         child: const Padding(
           padding: EdgeInsets.all(2),

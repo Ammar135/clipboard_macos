@@ -6,6 +6,10 @@ import 'clipboard_item_card.dart';
 import 'section_divider.dart';
 
 typedef ClipboardCardCallback = void Function(ClipboardCardUiModel model);
+typedef ClipboardMoreTapCallback = void Function(
+  ClipboardCardUiModel model,
+  Rect anchor,
+);
 typedef ClipboardQuickActionCallback = void Function(
   ClipboardCardUiModel model,
   String actionLabel,
@@ -15,7 +19,7 @@ class ClipboardPinnedSection extends StatelessWidget {
   final ClipboardPanelSectionUiModel section;
   final ClipboardCardCallback? onItemTap;
   final ClipboardCardCallback? onFavoriteTap;
-  final ClipboardCardCallback? onMoreTap;
+  final ClipboardMoreTapCallback? onMoreTap;
   final ClipboardQuickActionCallback? onQuickActionTap;
 
   const ClipboardPinnedSection({
@@ -52,7 +56,7 @@ class ClipboardRecentSections extends StatelessWidget {
   final List<ClipboardPanelSectionUiModel> sections;
   final ClipboardCardCallback? onItemTap;
   final ClipboardCardCallback? onFavoriteTap;
-  final ClipboardCardCallback? onMoreTap;
+  final ClipboardMoreTapCallback? onMoreTap;
   final ClipboardQuickActionCallback? onQuickActionTap;
 
   const ClipboardRecentSections({
@@ -88,7 +92,7 @@ class ClipboardSectionItems extends StatelessWidget {
   final ClipboardPanelSectionUiModel section;
   final ClipboardCardCallback? onItemTap;
   final ClipboardCardCallback? onFavoriteTap;
-  final ClipboardCardCallback? onMoreTap;
+  final ClipboardMoreTapCallback? onMoreTap;
   final ClipboardQuickActionCallback? onQuickActionTap;
 
   const ClipboardSectionItems({
@@ -148,7 +152,7 @@ class ClipboardSectionItems extends StatelessWidget {
       model: item,
       onTap: onItemTap == null ? null : () => onItemTap!(item),
       onFavoriteTap: onFavoriteTap == null ? null : () => onFavoriteTap!(item),
-      onMoreTap: onMoreTap == null ? null : () => onMoreTap!(item),
+      onMoreTap: onMoreTap == null ? null : (anchor) => onMoreTap!(item, anchor),
       onQuickActionTap: onQuickActionTap == null
           ? null
           : (label) => onQuickActionTap!(item, label),

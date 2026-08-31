@@ -13,6 +13,9 @@ import '../bloc/clipboard_event.dart';
 import '../bloc/clipboard_state.dart';
 import '../mappers/clipboard_panel_ui_mapper.dart';
 import '../models/clipboard_card_ui_model.dart';
+import '../../../../core/platform/clipboard_platform.dart';
+import '../widgets/modern/clipboard_settings_panel.dart';
+import '../widgets/modern/glass_panel.dart';
 import '../widgets/modern/clipboard_modern_panel.dart';
 import '../widgets/modern/compact_date_filter_button.dart';
 
@@ -20,31 +23,51 @@ class ClipboardModernPanelPage extends StatefulWidget {
   const ClipboardModernPanelPage({super.key});
 
   @override
-  State<ClipboardModernPanelPage> createState() => _ClipboardModernPanelPageState();
+  State<ClipboardModernPanelPage> createState() =>
+      _ClipboardModernPanelPageState();
 }
 
-class _ClipboardModernPanelPageState extends State<ClipboardModernPanelPage> {
+class _ClipboardModernPanelPageState extends State<ClipboardModernPanelPage>
+    with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final FocusNode _listFocusNode = FocusNode();
   Timer? _debounce;
   int? _selectedItemId;
+  bool _showSettings = false;
+  bool _launchAtLogin = false;
+  bool _launchAtLoginLoading = false;
+  bool _accessibilityGranted = false;
+  bool _shortcutRegistered = false;
+  String _appBundlePath = '';
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _searchFocusNode.requestFocus();
+      _refreshShortcutStatus();
+      if (!_showSettings) {
+        _searchFocusNode.requestFocus();
+      }
     });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     _searchFocusNode.dispose();
     _listFocusNode.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshShortcutStatus();
+    }
   }
 
   void _onSearchChanged(String query) {
@@ -77,8 +100,8 @@ class _ClipboardModernPanelPageState extends State<ClipboardModernPanelPage> {
     setState(() => _selectedItemId = card.itemId);
     final item = _findItem(context, card.itemId);
     context.read<ClipboardBloc>().add(
-          ClipboardItemSelected(item.content, item.type),
-        );
+      ClipboardItemSelected(item.content, item.type),
+    );
   }
 
   void _onQuickAction(ClipboardCardUiModel card, String actionLabel) {
@@ -98,20 +121,96 @@ class _ClipboardModernPanelPageState extends State<ClipboardModernPanelPage> {
     context.read<ClipboardBloc>().add(ClipboardHistoryCleared());
   }
 
-  Future<void> _showItemMenu(ClipboardCardUiModel card) async {
+  Future<void> _refreshShortcutStatus() async {
+    final platform = context.read<ClipboardPlatform>();
+    await platform.reregisterShortcut();
+
+    final results = await Future.wait<dynamic>([
+      platform.isAccessibilityGranted(),
+      platform.isShortcutRegistered(),
+      platform.getAppBundlePath(),
+    ]);
+
+    if (!mounted) return;
+    setState(() {
+      _accessibilityGranted = results[0] as bool;
+      _shortcutRegistered = results[1] as bool;
+      _appBundlePath = results[2] as String;
+    });
+  }
+
+  Future<void> _openSettings() async {
+    final platform = context.read<ClipboardPlatform>();
+
+    setState(() {
+      _showSettings = true;
+      _launchAtLoginLoading = true;
+    });
+
+    await _refreshShortcutStatus();
+
+    final launchAtLogin = await platform.getLaunchAtLogin();
+    if (!mounted) return;
+
+    setState(() {
+      _launchAtLogin = launchAtLogin;
+      _launchAtLoginLoading = false;
+    });
+  }
+
+  void _closeSettings() {
+    setState(() => _showSettings = false);
+    _searchFocusNode.requestFocus();
+  }
+
+  Future<void> _onLaunchAtLoginChanged(bool enabled) async {
+    final platform = context.read<ClipboardPlatform>();
+
+    setState(() {
+      _launchAtLogin = enabled;
+      _launchAtLoginLoading = true;
+    });
+
+    await platform.setLaunchAtLogin(enabled);
+    final actual = await platform.getLaunchAtLogin();
+    if (!mounted) return;
+
+    setState(() {
+      _launchAtLogin = actual;
+      _launchAtLoginLoading = false;
+    });
+  }
+
+  Future<void> _requestAccessibility() async {
+    final platform = context.read<ClipboardPlatform>();
+    await platform.requestAccessibility();
+    await _refreshShortcutStatus();
+  }
+
+  void _hideWindow() {
+    if (_showSettings) {
+      _closeSettings();
+    }
+    context.read<ClipboardBloc>().add(ClipboardWindowHidden());
+  }
+
+  Future<void> _showItemMenu(ClipboardCardUiModel card, Rect anchor) async {
     final item = _findItem(context, card.itemId);
+    final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
+    final position = RelativeRect.fromRect(
+      anchor,
+      Offset.zero & overlay.size,
+    );
+
     final action = await showMenu<String>(
       context: context,
-      position: const RelativeRect.fromLTRB(300, 300, 100, 100),
+      position: position,
       items: [
         PopupMenuItem(
           value: item.isFavorite ? 'unpin' : 'pin',
           child: Text(item.isFavorite ? 'Unpin' : 'Pin'),
         ),
-        const PopupMenuItem(
-          value: 'delete',
-          child: Text('Delete'),
-        ),
+        const PopupMenuItem(value: 'delete', child: Text('Delete')),
       ],
     );
 
@@ -161,6 +260,17 @@ class _ClipboardModernPanelPageState extends State<ClipboardModernPanelPage> {
             onKeyEvent: (event) {
               if (event is! KeyDownEvent) return;
 
+              if (event.logicalKey == LogicalKeyboardKey.escape) {
+                if (_showSettings) {
+                  _closeSettings();
+                } else {
+                  _hideWindow();
+                }
+                return;
+              }
+
+              if (_showSettings) return;
+
               final flatCards = <ClipboardCardUiModel>[
                 ...viewData.pinnedSection.listItems,
                 ...viewData.pinnedSection.gridItems,
@@ -172,8 +282,9 @@ class _ClipboardModernPanelPageState extends State<ClipboardModernPanelPage> {
 
               if (flatCards.isEmpty) return;
 
-              final currentIndex = flatCards
-                  .indexWhere((card) => card.itemId == _selectedItemId);
+              final currentIndex = flatCards.indexWhere(
+                (card) => card.itemId == _selectedItemId,
+              );
 
               if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
                 setState(() {
@@ -192,55 +303,70 @@ class _ClipboardModernPanelPageState extends State<ClipboardModernPanelPage> {
                 }
               } else if (event.logicalKey == LogicalKeyboardKey.enter) {
                 final selectedId = _selectedItemId ?? flatCards.first.itemId;
-                final card = flatCards
-                    .firstWhere((entry) => entry.itemId == selectedId);
+                final card = flatCards.firstWhere(
+                  (entry) => entry.itemId == selectedId,
+                );
                 _selectItem(card);
-              } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-                context.read<ClipboardBloc>().add(ClipboardWindowHidden());
               }
             },
             child: Align(
               alignment: Alignment.center,
-              child: ClipboardModernPanel(
-                categoryChips: viewData.categoryChips,
-                pinnedSection: viewData.pinnedSection,
-                sections: viewData.sections,
-                totalItemCount: viewData.totalItemCount,
-                isFilterActive: state.dateFilter.isActive,
-                emptyMessage: _emptyMessage(state),
-                searchController: _searchController,
-                searchFocusNode: _searchFocusNode,
-                onSearchChanged: _onSearchChanged,
-                dateFilterButton: CompactDateFilterButton(
-                  currentFilter: state.dateFilter,
-                  onFilterChanged: (ClipboardDateFilter filter) {
-                    setState(() => _selectedItemId = null);
-                    context
-                        .read<ClipboardBloc>()
-                        .add(ClipboardDateFilterChanged(filter));
-                  },
-                ),
-                onCloseTap: () =>
-                    context.read<ClipboardBloc>().add(ClipboardWindowHidden()),
-                onCategoryChipTap: (chip) {
-                  setState(() => _selectedItemId = null);
-                  final currentFilter =
-                      (context.read<ClipboardBloc>().state as ClipboardLoaded)
-                          .categoryFilter;
-                  final nextCategory =
-                      chip.category == currentFilter ? null : chip.category;
-                  context.read<ClipboardBloc>().add(
-                        ClipboardCategoryFilterChanged(nextCategory),
-                      );
-                },
-                onItemTap: _selectItem,
-                onFavoriteTap: (card) => context
-                    .read<ClipboardBloc>()
-                    .add(ClipboardFavoriteToggled(card.itemId)),
-                onMoreTap: _showItemMenu,
-                onQuickActionTap: _onQuickAction,
-                onClearHistoryTap: _clearHistory,
-              ),
+              child: _showSettings
+                  ? GlassPanel(
+                      child: ClipboardSettingsPanel(
+                        launchAtLogin: _launchAtLogin,
+                        isLoading: _launchAtLoginLoading,
+                        accessibilityGranted: _accessibilityGranted,
+                        shortcutRegistered: _shortcutRegistered,
+                        appBundlePath: _appBundlePath,
+                        onLaunchAtLoginChanged: _onLaunchAtLoginChanged,
+                        onRequestAccessibilityTap: _requestAccessibility,
+                        onBackTap: _closeSettings,
+                        onCloseTap: _hideWindow,
+                      ),
+                    )
+                  : ClipboardModernPanel(
+                      categoryChips: viewData.categoryChips,
+                      pinnedSection: viewData.pinnedSection,
+                      sections: viewData.sections,
+                      totalItemCount: viewData.totalItemCount,
+                      isFilterActive: state.dateFilter.isActive,
+                      emptyMessage: _emptyMessage(state),
+                      searchController: _searchController,
+                      searchFocusNode: _searchFocusNode,
+                      onSearchChanged: _onSearchChanged,
+                      dateFilterButton: CompactDateFilterButton(
+                        currentFilter: state.dateFilter,
+                        onFilterChanged: (ClipboardDateFilter filter) {
+                          setState(() => _selectedItemId = null);
+                          context.read<ClipboardBloc>().add(
+                            ClipboardDateFilterChanged(filter),
+                          );
+                        },
+                      ),
+                      onCloseTap: _hideWindow,
+                      onSettingsTap: _openSettings,
+                      onCategoryChipTap: (chip) {
+                        setState(() => _selectedItemId = null);
+                        final currentFilter =
+                            (context.read<ClipboardBloc>().state
+                                    as ClipboardLoaded)
+                                .categoryFilter;
+                        final nextCategory = chip.category == currentFilter
+                            ? null
+                            : chip.category;
+                        context.read<ClipboardBloc>().add(
+                          ClipboardCategoryFilterChanged(nextCategory),
+                        );
+                      },
+                      onItemTap: _selectItem,
+                      onFavoriteTap: (card) => context
+                          .read<ClipboardBloc>()
+                          .add(ClipboardFavoriteToggled(card.itemId)),
+                      onMoreTap: _showItemMenu,
+                      onQuickActionTap: _onQuickAction,
+                      onClearHistoryTap: _clearHistory,
+                    ),
             ),
           );
         },

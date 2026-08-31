@@ -11,6 +11,7 @@ class CommandBarHeader extends StatelessWidget {
   final ValueChanged<String>? onSearchChanged;
   final bool isFilterActive;
   final Widget? dateFilterButton;
+  final VoidCallback? onSettingsTap;
   final VoidCallback? onCloseTap;
 
   const CommandBarHeader({
@@ -20,6 +21,7 @@ class CommandBarHeader extends StatelessWidget {
     this.onSearchChanged,
     this.isFilterActive = false,
     this.dateFilterButton,
+    this.onSettingsTap,
     this.onCloseTap,
   });
 
@@ -79,6 +81,11 @@ class CommandBarHeader extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+          const SizedBox(width: 4),
+          _HeaderIconButton(
+            icon: CupertinoIcons.gear,
+            onTap: onSettingsTap,
           ),
           const SizedBox(width: 4),
           _HeaderIconButton(
