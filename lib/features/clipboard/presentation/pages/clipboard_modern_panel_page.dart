@@ -272,12 +272,8 @@ class _ClipboardModernPanelPageState extends State<ClipboardModernPanelPage>
               if (_showSettings) return;
 
               final flatCards = <ClipboardCardUiModel>[
-                ...viewData.pinnedSection.listItems,
-                ...viewData.pinnedSection.gridItems,
-                for (final section in viewData.sections) ...[
-                  ...section.listItems,
-                  ...section.gridItems,
-                ],
+                ...viewData.pinnedSection.items,
+                for (final section in viewData.sections) ...section.items,
               ];
 
               if (flatCards.isEmpty) return;

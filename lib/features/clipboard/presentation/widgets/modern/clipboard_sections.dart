@@ -111,39 +111,66 @@ class ClipboardSectionItems extends StatelessWidget {
         horizontal: ClipboardUiDimensions.contentPadding,
       ),
       child: Column(
-        children: [
-          for (var i = 0; i < section.listItems.length; i++) ...[
-            if (i > 0) const SizedBox(height: ClipboardUiDimensions.gridSpacing),
-            _buildCard(section.listItems[i]),
-          ],
-          if (section.listItems.isNotEmpty && section.gridItems.isNotEmpty)
-            const SizedBox(height: ClipboardUiDimensions.gridSpacing),
-          if (section.gridItems.isNotEmpty)
-            LayoutBuilder(
-              builder: (context, constraints) {
-                const crossAxisCount = 3;
-                const spacing = ClipboardUiDimensions.gridSpacing;
-                final tileWidth =
-                    (constraints.maxWidth - (spacing * (crossAxisCount - 1))) /
-                        crossAxisCount;
-
-                return Wrap(
-                  spacing: spacing,
-                  runSpacing: spacing,
-                  children: section.gridItems
-                      .map(
-                        (item) => SizedBox(
-                          width: tileWidth,
-                          height: 118,
-                          child: _buildCard(item),
-                        ),
-                      )
-                      .toList(),
-                );
-              },
-            ),
-        ],
+        children: _buildOrderedItemWidgets(),
       ),
+    );
+  }
+
+  List<Widget> _buildOrderedItemWidgets() {
+    final widgets = <Widget>[];
+    var index = 0;
+
+    while (index < section.items.length) {
+      final item = section.items[index];
+
+      if (item.layout == ClipboardCardLayout.list) {
+        if (widgets.isNotEmpty) {
+          widgets.add(const SizedBox(height: ClipboardUiDimensions.gridSpacing));
+        }
+        widgets.add(_buildCard(item));
+        index++;
+        continue;
+      }
+
+      final gridRun = <ClipboardCardUiModel>[];
+      while (index < section.items.length &&
+          section.items[index].layout == ClipboardCardLayout.grid) {
+        gridRun.add(section.items[index]);
+        index++;
+      }
+
+      if (widgets.isNotEmpty) {
+        widgets.add(const SizedBox(height: ClipboardUiDimensions.gridSpacing));
+      }
+      widgets.add(_buildGridRun(gridRun));
+    }
+
+    return widgets;
+  }
+
+  Widget _buildGridRun(List<ClipboardCardUiModel> gridRun) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const crossAxisCount = 3;
+        const spacing = ClipboardUiDimensions.gridSpacing;
+        final tileWidth =
+            (constraints.maxWidth - (spacing * (crossAxisCount - 1))) /
+                crossAxisCount;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: gridRun
+              .map(
+                (item) => SizedBox(
+                  width: tileWidth,
+                  height: 118,
+                  child: _buildCard(item),
+                ),
+              )
+              .toList(),
+        );
+      },
     );
   }
 

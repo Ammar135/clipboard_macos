@@ -29,19 +29,13 @@ class ClipboardPanelUiMapper {
         ? items
         : items.where((item) => item.category == categoryFilter).toList();
 
-    final pinnedListItems = <ClipboardCardUiModel>[];
-    final pinnedGridItems = <ClipboardCardUiModel>[];
+    final pinnedItems = <ClipboardCardUiModel>[];
     final recentByDay = <String, List<ClipboardItem>>{};
 
     for (final item in filtered) {
       if (item.isFavorite) {
         final layout = _layoutFor(item.category);
-        final card = _toCard(item, selectedItemId, locale, layout);
-        if (layout == ClipboardCardLayout.grid) {
-          pinnedGridItems.add(card);
-        } else {
-          pinnedListItems.add(card);
-        }
+        pinnedItems.add(_toCard(item, selectedItemId, locale, layout));
       } else {
         final key = _dayKey(item.createdAt);
         recentByDay.putIfAbsent(key, () => []).add(item);
@@ -54,24 +48,21 @@ class ClipboardPanelUiMapper {
 
     for (final dayKey in sortedDayKeys) {
       final dayItems = recentByDay[dayKey]!;
-      final listItems = <ClipboardCardUiModel>[];
-      final gridItems = <ClipboardCardUiModel>[];
-
-      for (final item in dayItems) {
-        final layout = _layoutFor(item.category);
-        final card = _toCard(item, selectedItemId, locale, layout);
-        if (layout == ClipboardCardLayout.grid) {
-          gridItems.add(card);
-        } else {
-          listItems.add(card);
-        }
-      }
+      final sectionItems = dayItems
+          .map(
+            (item) => _toCard(
+              item,
+              selectedItemId,
+              locale,
+              _layoutFor(item.category),
+            ),
+          )
+          .toList();
 
       sections.add(
         ClipboardPanelSectionUiModel(
           label: '${_sectionLabel(dayKey, locale)} · ${dayItems.length} items',
-          listItems: listItems,
-          gridItems: gridItems,
+          items: sectionItems,
         ),
       );
     }
@@ -88,8 +79,7 @@ class ClipboardPanelUiMapper {
           .toList(),
       pinnedSection: ClipboardPanelSectionUiModel(
         label: 'PINNED',
-        listItems: pinnedListItems,
-        gridItems: pinnedGridItems,
+        items: pinnedItems,
       ),
       sections: sections,
       totalItemCount: filtered.length,
